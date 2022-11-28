@@ -1,0 +1,10 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/ReceiptReaderMauiBlazor/bin/Debug/net6.0-windows10.0.19041.0/win10-x64
+/ReceiptReaderMauiBlazor/bin/Debug/net6.0-maccatalyst/maccatalyst-x64/ReceiptReaderMauiBlazor.app/Contents/MonoBundle
+/ReceiptReaderMauiBlazor/bin/Debug
+/ReceiptReaderMauiBlazor/.vs/ProjectEvaluation
+/.vs
+/ReceiptReaderMauiBlazor/obj
