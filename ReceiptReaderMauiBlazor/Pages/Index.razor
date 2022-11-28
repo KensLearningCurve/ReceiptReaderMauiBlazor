@@ -1,0 +1,113 @@
+﻿@page "/"
+@using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
+@using ReceiptReaderMauiBlazor.Data;
+<style>
+    .receipt{
+        width: 500px;
+        position:absolute;
+    }
+
+    .box {
+        position: absolute;
+        z-index: 2;
+    }
+
+    .rectangle{
+        stroke-width: 1;
+        stroke: rgba(0,0,100);
+    }
+</style>
+
+<div>
+    <button @onclick="OnOpenFileClick">Open file</button>
+</div>
+
+@if (!string.IsNullOrEmpty(imageSource))
+{
+    <img src="@imageSource" class="receipt" />
+
+<svg width="500" height="2000" class="box" >
+    @foreach (Rectangle rectangle in rectangles)
+    {
+        <rect x="@rectangle.X"
+            y="@rectangle.Y"
+            width="@rectangle.Width"
+            height="@rectangle.Height"
+            class="fill"
+            style="fill: @rectangle.FillColor"
+            @onclick="@(e => Index.OnRectangleSelected(e, rectangle))" />
+    }
+    </svg>
+}
+
+@code{
+    string imageSource;
+    List<Rectangle> rectangles = new();
+
+    private async void OnOpenFileClick()
+    {
+        FilePickerFileType fileTypes = new(
+            new Dictionary<DevicePlatform, IEnumerable<string>>
+            {
+                { DevicePlatform.WinUI, new[] { ".jpg", ".png", ".jpeg", ".bmp" } }
+            }
+        );
+
+        PickOptions options = new()
+        {
+            PickerTitle = "Please select an image",
+            FileTypes = fileTypes,
+        };
+
+        FileResult result = await FilePicker.Default.PickAsync(options);
+
+        if (result == null)
+            return;
+
+        PlaceImage(result.FullPath);
+
+        ReceiptReader receiptReader = new();
+        ReadResult readResult = await receiptReader.Read(result.FullPath);
+
+        PlaceRectangles(readResult);
+
+        await InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
+    }
+
+private static async void OnRectangleSelected(MouseEventArgs e, Rectangle selectedRectangle)
+{
+    await Application.Current.MainPage.DisplayAlert("Text selected", $"You selected \"{selectedRectangle.Text}\"", "Cancel");
+}
+
+    private void PlaceImage(string pathToFile)
+    {
+        var imageBytes = File.ReadAllBytes(pathToFile);
+        imageSource = Convert.ToBase64String(imageBytes);
+        imageSource = string.Format("data:image/png;base64,{0}", imageSource);
+    }
+
+    private void PlaceRectangles(ReadResult page)
+    {
+        rectangles = new();
+        Random rnd = new();
+
+        foreach (var line in page.Lines)
+        {
+            Rectangle myRect = new()
+                {
+                    X = (int)Math.Ceiling((line.BoundingBox[0].Value / 100) * 47.04),
+                    Y = (int)Math.Ceiling((line.BoundingBox[1].Value / 100) * 47.04),
+                    FillColor = $"rgb({rnd.Next(256)}, {rnd.Next(256)}, {rnd.Next(256)}, 0.5)",
+                    Text = line.Text
+                };
+
+            myRect.Width = (int)Math.Ceiling((line.BoundingBox[2].Value  / 100 * 47.04)) - myRect.X;
+            myRect.Height = (int)Math.Ceiling((line.BoundingBox[5].Value  / 100 * 47.04)) - myRect.Y;
+
+            rectangles.Add(myRect);
+        }
+    }
+}
